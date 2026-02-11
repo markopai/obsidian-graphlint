@@ -37,11 +37,9 @@ export class Repo implements IRepo {
   ): Promise<[string, string] | null> {
     let reqFile: TFile | undefined;
 
-    if (graph.path.includes('void') && name.split('.').length === 1) {
+    if (graph.path.includes('Void') && name.split('.').length === 1) {
       reqFile = graph.files.find((file) => file.basename === name);
-    }
-
-    if (!reqFile) {
+    } else {
       reqFile = graph.files.find((file) => file.basename.endsWith(name));
     }
 

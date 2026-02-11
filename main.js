@@ -40,10 +40,9 @@ var Repo = class {
   }
   async find(graph, name, create = true) {
     let reqFile;
-    if (graph.path.includes("void") && name.split(".").length === 1) {
+    if (graph.path.includes("Void") && name.split(".").length === 1) {
       reqFile = graph.files.find((file) => file.basename === name);
-    }
-    if (!reqFile) {
+    } else {
       reqFile = graph.files.find((file) => file.basename.endsWith(name));
     }
     if (!reqFile) {
