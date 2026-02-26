@@ -41,3 +41,86 @@ export class ConfirmationModal extends Modal {
     contentEl.empty();
   }
 }
+
+export class ChoiceModal extends Modal {
+  private choices: string[];
+  private onSubmit: (choice: string) => void;
+
+  constructor(app: App, choices: string[], onSubmit: (choice: string) => void) {
+    super(app);
+    this.choices = choices;
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('h2', { text: 'Выберите действие' });
+
+    const listContainer = contentEl.createDiv('choice-list');
+
+    this.choices.forEach((choice) => {
+      const button = listContainer.createEl('button', {
+        text: choice,
+        cls: 'mod-cta',
+      });
+      button.style.margin = '5px';
+      button.style.width = '100%';
+
+      button.addEventListener('click', () => {
+        this.close();
+        this.onSubmit(choice);
+      });
+    });
+  }
+
+  onClose(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+export class PromptModal extends Modal {
+  private promptText: string;
+  private onSubmit: (result: string) => void;
+
+  constructor(app: App, promptText: string, onSubmit: (result: string) => void) {
+    super(app);
+    this.promptText = promptText;
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('h3', { text: this.promptText });
+
+    const input = contentEl.createEl('input', { type: 'text' });
+    input.style.width = '100%';
+    input.style.marginBottom = '10px';
+
+    const submitBtn = contentEl.createEl('button', {
+      text: 'Подтвердить',
+      cls: 'mod-cta',
+    });
+
+    submitBtn.addEventListener('click', () => {
+      if (input.value.trim() !== '') {
+        this.close();
+        this.onSubmit(input.value.trim());
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && input.value.trim() !== '') {
+        this.close();
+        this.onSubmit(input.value.trim());
+      }
+    });
+
+    setTimeout(() => input.focus(), 50);
+  }
+
+  onClose(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+}

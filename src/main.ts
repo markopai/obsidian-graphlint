@@ -2,6 +2,7 @@ import { Plugin, Notice } from 'obsidian';
 import { updateNoteLinks } from './commands/note_update';
 import { updateAllLinks } from './commands/all_note_update';
 import { createNewEvent } from './commands/new_event';
+import { addRelative } from './commands/add_relative';
 import { ConfirmationModal } from './ui/modal';
 import { PeriodicNotesSettingTab, DEFAULT_SETTINGS, PluginSettings } from './settings/settings';
 
@@ -11,13 +12,9 @@ export default class PeriodicNotesPlugin extends Plugin {
   async onload(): Promise<void> {
     console.log('Загрузка Periodic Notes Linker');
 
-    // Загрузка настроек
     await this.loadSettings();
-
-    // Добавление вкладки настроек
     this.addSettingTab(new PeriodicNotesSettingTab(this.app, this));
 
-    // Команды...
     this.addCommand({
       id: 'update-links-of-note',
       name: 'Обновить ссылки заметки',
@@ -64,6 +61,19 @@ export default class PeriodicNotesPlugin extends Plugin {
           new Notice('Создание закончено');
         } catch (error) {
           new Notice('Ошибка при создании');
+          console.error(error);
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'add-relative-note',
+      name: 'Добавить родственника к текущей заметке',
+      callback: async () => {
+        try {
+          await addRelative(this);
+        } catch (error) {
+          new Notice('Ошибка при добавлении родственника');
           console.error(error);
         }
       },

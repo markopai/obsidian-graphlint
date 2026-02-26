@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => PeriodicNotesPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/commands/note_update.ts
 var import_obsidian2 = require("obsidian");
@@ -700,6 +700,9 @@ async function createNewEvent(plugin) {
   }
 }
 
+// src/commands/add_relative.ts
+var import_obsidian5 = require("obsidian");
+
 // src/ui/modal.ts
 var import_obsidian4 = require("obsidian");
 var ConfirmationModal = class extends import_obsidian4.Modal {
@@ -730,9 +733,175 @@ var ConfirmationModal = class extends import_obsidian4.Modal {
     contentEl.empty();
   }
 };
+var ChoiceModal = class extends import_obsidian4.Modal {
+  constructor(app, choices, onSubmit) {
+    super(app);
+    this.choices = choices;
+    this.onSubmit = onSubmit;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", { text: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435" });
+    const listContainer = contentEl.createDiv("choice-list");
+    this.choices.forEach((choice) => {
+      const button = listContainer.createEl("button", {
+        text: choice,
+        cls: "mod-cta"
+      });
+      button.style.margin = "5px";
+      button.style.width = "100%";
+      button.addEventListener("click", () => {
+        this.close();
+        this.onSubmit(choice);
+      });
+    });
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+var PromptModal = class extends import_obsidian4.Modal {
+  constructor(app, promptText, onSubmit) {
+    super(app);
+    this.promptText = promptText;
+    this.onSubmit = onSubmit;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h3", { text: this.promptText });
+    const input = contentEl.createEl("input", { type: "text" });
+    input.style.width = "100%";
+    input.style.marginBottom = "10px";
+    const submitBtn = contentEl.createEl("button", {
+      text: "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C",
+      cls: "mod-cta"
+    });
+    submitBtn.addEventListener("click", () => {
+      if (input.value.trim() !== "") {
+        this.close();
+        this.onSubmit(input.value.trim());
+      }
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && input.value.trim() !== "") {
+        this.close();
+        this.onSubmit(input.value.trim());
+      }
+    });
+    setTimeout(() => input.focus(), 50);
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+
+// src/commands/add_relative.ts
+async function addRelative(plugin) {
+  const file = plugin.app.workspace.getActiveFile();
+  if (!file) {
+    new import_obsidian5.Notice("\u041D\u0435\u0442 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u0444\u0430\u0439\u043B\u0430");
+    return;
+  }
+  const words = file.basename.split(".");
+  const folderPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
+  new ChoiceModal(
+    plugin.app,
+    ["\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430", "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430", "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430"],
+    async (action) => {
+      var _a;
+      if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430") {
+        new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0440\u0435\u0431\u0451\u043D\u043A\u0430:", async (inputName) => {
+          const newName = `${file.basename}.${inputName}`;
+          const newPath = `${folderPath}${newName}.md`;
+          try {
+            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
+`);
+            await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
+          } catch (e) {
+            new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430");
+          }
+        }).open();
+      } else if (action === "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430") {
+        if (words.length <= 1) {
+          new import_obsidian5.Notice("\u0423 \u044D\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0446\u0430 (\u043E\u043D\u0430 \u043A\u043E\u0440\u043D\u0435\u0432\u0430\u044F)");
+          return;
+        }
+        const fatherName = words.slice(0, -1).join(".");
+        const fatherPath = `${folderPath}${fatherName}.md`;
+        try {
+          let fatherFile = plugin.app.vault.getAbstractFileByPath(fatherPath);
+          if (!fatherFile) {
+            const fatherTitle = (_a = words[words.length - 2]) != null ? _a : fatherName;
+            fatherFile = await plugin.app.vault.create(fatherPath, `# ${fatherTitle}
+`);
+            await updateAndOpen(plugin, fatherFile, fatherName, "\u043E\u0442\u0435\u0446");
+          } else if (fatherFile instanceof import_obsidian5.TFile) {
+            await plugin.app.workspace.getLeaf(false).openFile(fatherFile);
+            new import_obsidian5.Notice(`\u041E\u0442\u0435\u0446 \u043E\u0442\u043A\u0440\u044B\u0442: ${fatherName}`);
+          }
+        } catch (e) {
+          new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0438\u043B\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u043E\u0442\u0446\u0430");
+        }
+      } else if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430") {
+        if (words.length <= 1) {
+          new import_obsidian5.Notice("\u0423 \u043A\u043E\u0440\u043D\u0435\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0431\u0440\u0430\u0442\u0430 \u0442\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C");
+          return;
+        }
+        new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0431\u0440\u0430\u0442\u0430:", async (inputName) => {
+          const fatherName = words.slice(0, -1).join(".");
+          const newName = `${fatherName}.${inputName}`;
+          const newPath = `${folderPath}${newName}.md`;
+          try {
+            const currentText = await plugin.app.vault.read(file);
+            const headers = currentText.split("\n").filter((line) => line.startsWith("#")).join("\n");
+            const currentTitle = words[words.length - 1];
+            const initialContent = headers ? headers.replace(new RegExp(`# ${currentTitle}`, "g"), `# ${inputName}`) : `# ${inputName}
+`;
+            const newFile = await plugin.app.vault.create(newPath, initialContent);
+            await updateAndOpen(plugin, newFile, newName, "\u0431\u0440\u0430\u0442");
+          } catch (e) {
+            new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0431\u0440\u0430\u0442\u0430");
+          }
+        }).open();
+      }
+    }
+  ).open();
+}
+async function updateAndOpen(plugin, file, name, type) {
+  const allFiles = plugin.app.vault.getMarkdownFiles();
+  const voidFiles = allFiles.filter((f) => f.path.startsWith(plugin.settings.paths.void));
+  const celestiaFiles = allFiles.filter(
+    (f) => f.path.startsWith(plugin.settings.paths.celestia)
+  );
+  const repository = new Repo(plugin);
+  const VOID = repository.createGraph(
+    voidFiles,
+    plugin.settings.paths.void,
+    plugin.settings.aliases.void
+  );
+  const CELESTIA = repository.createGraph(
+    celestiaFiles,
+    plugin.settings.paths.celestia,
+    plugin.settings.aliases.celestia
+  );
+  let targetGraph = null;
+  if (file.path.includes(plugin.settings.paths.void)) {
+    targetGraph = VOID;
+  } else if (file.path.includes(plugin.settings.paths.celestia)) {
+    targetGraph = CELESTIA;
+  }
+  if (targetGraph) {
+    const updater = new Updater(plugin);
+    await updater.update(file, targetGraph, CELESTIA);
+  }
+  await plugin.app.workspace.getLeaf(false).openFile(file);
+  new import_obsidian5.Notice(`\u0421\u043E\u0437\u0434\u0430\u043D \u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0451\u043D ${type}: ${name}`);
+}
 
 // src/settings/settings.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 var DEFAULT_SETTINGS = {
   paths: {
     void: "master/<9> void/",
@@ -778,7 +947,7 @@ var DEFAULT_SETTINGS = {
     types: ["\u0421\u043E\u043D", "\u041C\u044B\u0441\u043B\u044C", "\u0410\u043D\u0430\u043B\u0438\u0437", "\u0421\u0430\u043C\u043E\u0430\u043D\u0430\u043B\u0438\u0437"]
   }
 };
-var PeriodicNotesSettingTab = class extends import_obsidian5.PluginSettingTab {
+var PeriodicNotesSettingTab = class extends import_obsidian6.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -788,51 +957,51 @@ var PeriodicNotesSettingTab = class extends import_obsidian5.PluginSettingTab {
     containerEl.empty();
     containerEl.createEl("h2", { text: "Periodic Notes Linker - \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438" });
     containerEl.createEl("h3", { text: "\u041F\u0443\u0442\u0438 \u043A \u043F\u0430\u043F\u043A\u0430\u043C" });
-    new import_obsidian5.Setting(containerEl).setName("\u041F\u0443\u0442\u044C \u043A Void").setDesc("\u041F\u0443\u0442\u044C \u043A \u043F\u0430\u043F\u043A\u0435 \u0441 \u0437\u0430\u043C\u0435\u0442\u043A\u0430\u043C\u0438 Void").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u041F\u0443\u0442\u044C \u043A Void").setDesc("\u041F\u0443\u0442\u044C \u043A \u043F\u0430\u043F\u043A\u0435 \u0441 \u0437\u0430\u043C\u0435\u0442\u043A\u0430\u043C\u0438 Void").addText(
       (text) => text.setPlaceholder("master/<9> void/").setValue(this.plugin.settings.paths.void).onChange(async (value) => {
         this.plugin.settings.paths.void = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("\u041F\u0443\u0442\u044C \u043A Celestia").setDesc("\u041F\u0443\u0442\u044C \u043A \u043F\u0430\u043F\u043A\u0435 \u0441 \u0437\u0430\u043C\u0435\u0442\u043A\u0430\u043C\u0438 Celestia").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u041F\u0443\u0442\u044C \u043A Celestia").setDesc("\u041F\u0443\u0442\u044C \u043A \u043F\u0430\u043F\u043A\u0435 \u0441 \u0437\u0430\u043C\u0435\u0442\u043A\u0430\u043C\u0438 Celestia").addText(
       (text) => text.setPlaceholder("master/<-9> celestia/").setValue(this.plugin.settings.paths.celestia).onChange(async (value) => {
         this.plugin.settings.paths.celestia = value;
         await this.plugin.saveSettings();
       })
     );
     containerEl.createEl("h3", { text: "\u0410\u043B\u0438\u0430\u0441\u044B \u0434\u043B\u044F Void" });
-    new import_obsidian5.Setting(containerEl).setName("Void: \u041E\u0441\u043D\u043E\u0432\u0430\u0442\u0435\u043B\u044C (Founder)").addText(
+    new import_obsidian6.Setting(containerEl).setName("Void: \u041E\u0441\u043D\u043E\u0432\u0430\u0442\u0435\u043B\u044C (Founder)").addText(
       (text) => text.setPlaceholder("herald").setValue(this.plugin.settings.aliases.void.founder).onChange(async (value) => {
         this.plugin.settings.aliases.void.founder = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Void: \u041F\u0440\u0435\u0434\u043E\u043A (Ancestor)").addText(
+    new import_obsidian6.Setting(containerEl).setName("Void: \u041F\u0440\u0435\u0434\u043E\u043A (Ancestor)").addText(
       (text) => text.setPlaceholder("bubble").setValue(this.plugin.settings.aliases.void.ancestor).onChange(async (value) => {
         this.plugin.settings.aliases.void.ancestor = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Void: \u0420\u043E\u0434\u0438\u0442\u0435\u043B\u044C (Father)").addText(
+    new import_obsidian6.Setting(containerEl).setName("Void: \u0420\u043E\u0434\u0438\u0442\u0435\u043B\u044C (Father)").addText(
       (text) => text.setPlaceholder("arm").setValue(this.plugin.settings.aliases.void.father).onChange(async (value) => {
         this.plugin.settings.aliases.void.father = value;
         await this.plugin.saveSettings();
       })
     );
     containerEl.createEl("h3", { text: "\u0410\u043B\u0438\u0430\u0441\u044B \u0434\u043B\u044F Celestia" });
-    new import_obsidian5.Setting(containerEl).setName("Celestia: \u041E\u0441\u043D\u043E\u0432\u0430\u0442\u0435\u043B\u044C (Founder)").addText(
+    new import_obsidian6.Setting(containerEl).setName("Celestia: \u041E\u0441\u043D\u043E\u0432\u0430\u0442\u0435\u043B\u044C (Founder)").addText(
       (text) => text.setPlaceholder("archont").setValue(this.plugin.settings.aliases.celestia.founder).onChange(async (value) => {
         this.plugin.settings.aliases.celestia.founder = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Celestia: \u041F\u0440\u0435\u0434\u043E\u043A (Ancestor)").addText(
+    new import_obsidian6.Setting(containerEl).setName("Celestia: \u041F\u0440\u0435\u0434\u043E\u043A (Ancestor)").addText(
       (text) => text.setPlaceholder("band").setValue(this.plugin.settings.aliases.celestia.ancestor).onChange(async (value) => {
         this.plugin.settings.aliases.celestia.ancestor = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Celestia: \u0420\u043E\u0434\u0438\u0442\u0435\u043B\u044C (Father)").addText(
+    new import_obsidian6.Setting(containerEl).setName("Celestia: \u0420\u043E\u0434\u0438\u0442\u0435\u043B\u044C (Father)").addText(
       (text) => text.setPlaceholder("mate").setValue(this.plugin.settings.aliases.celestia.father).onChange(async (value) => {
         this.plugin.settings.aliases.celestia.father = value;
         await this.plugin.saveSettings();
@@ -846,7 +1015,7 @@ var PeriodicNotesSettingTab = class extends import_obsidian5.PluginSettingTab {
       { emoji: "\u{1F32C}\uFE0F", name: "\u0421\u0430\u043C\u043E\u0440\u0430\u0437\u0432\u0438\u0442\u0438\u0435", key: "\u{1F32C}\uFE0F" }
     ];
     tagMappings.forEach(({ emoji, name, key }) => {
-      new import_obsidian5.Setting(containerEl).setName(`${emoji} \u2192`).addText(
+      new import_obsidian6.Setting(containerEl).setName(`${emoji} \u2192`).addText(
         (text) => text.setPlaceholder(name.toLowerCase()).setValue(this.plugin.settings.tags.mapping[key]).onChange(async (value) => {
           this.plugin.settings.tags.mapping[key] = value;
           await this.plugin.saveSettings();
@@ -854,75 +1023,75 @@ var PeriodicNotesSettingTab = class extends import_obsidian5.PluginSettingTab {
       );
     });
     containerEl.createEl("h3", { text: "\u0428\u0430\u0431\u043B\u043E\u043D\u044B \u043F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0437\u0430\u043C\u0435\u0442\u043E\u043A" });
-    new import_obsidian5.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Daily").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Daily").addText(
       (text) => text.setPlaceholder("0000-00-00").setValue(this.plugin.settings.periodic.templates.daily).onChange(async (value) => {
         this.plugin.settings.periodic.templates.daily = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Weekly").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Weekly").addText(
       (text) => text.setPlaceholder("0000-W00").setValue(this.plugin.settings.periodic.templates.weekly).onChange(async (value) => {
         this.plugin.settings.periodic.templates.weekly = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Monthly").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Monthly").addText(
       (text) => text.setPlaceholder("0000-00").setValue(this.plugin.settings.periodic.templates.monthly).onChange(async (value) => {
         this.plugin.settings.periodic.templates.monthly = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Quarterly").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Quarterly").addText(
       (text) => text.setPlaceholder("0000-Q0").setValue(this.plugin.settings.periodic.templates.quarterly).onChange(async (value) => {
         this.plugin.settings.periodic.templates.quarterly = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Yearly").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u0428\u0430\u0431\u043B\u043E\u043D Yearly").addText(
       (text) => text.setPlaceholder("0000").setValue(this.plugin.settings.periodic.templates.yearly).onChange(async (value) => {
         this.plugin.settings.periodic.templates.yearly = value;
         await this.plugin.saveSettings();
       })
     );
     containerEl.createEl("h3", { text: "\u041F\u0443\u0442\u0438 \u043A \u043F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0437\u0430\u043C\u0435\u0442\u043A\u0430\u043C \u0432 Celestia" });
-    new import_obsidian5.Setting(containerEl).setName("Daily \u043F\u0443\u0442\u044C").addText(
+    new import_obsidian6.Setting(containerEl).setName("Daily \u043F\u0443\u0442\u044C").addText(
       (text) => text.setPlaceholder("\u2764\uFE0F\u200D\u{1F525}.\u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440\u044C.\u043F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0438\u0435.\u043F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0430\u044F.daily").setValue(this.plugin.settings.periodic.celestia_paths.daily).onChange(async (value) => {
         this.plugin.settings.periodic.celestia_paths.daily = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Weekly \u043F\u0443\u0442\u044C").addText(
+    new import_obsidian6.Setting(containerEl).setName("Weekly \u043F\u0443\u0442\u044C").addText(
       (text) => text.setValue(this.plugin.settings.periodic.celestia_paths.weekly).onChange(async (value) => {
         this.plugin.settings.periodic.celestia_paths.weekly = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Monthly \u043F\u0443\u0442\u044C").addText(
+    new import_obsidian6.Setting(containerEl).setName("Monthly \u043F\u0443\u0442\u044C").addText(
       (text) => text.setValue(this.plugin.settings.periodic.celestia_paths.monthly).onChange(async (value) => {
         this.plugin.settings.periodic.celestia_paths.monthly = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Quarterly \u043F\u0443\u0442\u044C").addText(
+    new import_obsidian6.Setting(containerEl).setName("Quarterly \u043F\u0443\u0442\u044C").addText(
       (text) => text.setValue(this.plugin.settings.periodic.celestia_paths.quarterly).onChange(async (value) => {
         this.plugin.settings.periodic.celestia_paths.quarterly = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("Yearly \u043F\u0443\u0442\u044C").addText(
+    new import_obsidian6.Setting(containerEl).setName("Yearly \u043F\u0443\u0442\u044C").addText(
       (text) => text.setValue(this.plugin.settings.periodic.celestia_paths.yearly).onChange(async (value) => {
         this.plugin.settings.periodic.celestia_paths.yearly = value;
         await this.plugin.saveSettings();
       })
     );
     containerEl.createEl("h3", { text: "\u0422\u0438\u043F\u044B \u0441\u043E\u0431\u044B\u0442\u0438\u0439" });
-    new import_obsidian5.Setting(containerEl).setName("\u0422\u0438\u043F\u044B \u0441\u043E\u0431\u044B\u0442\u0438\u0439").setDesc("\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0438\u043F\u044B \u0441\u043E\u0431\u044B\u0442\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 \u0437\u0430\u043F\u044F\u0442\u0443\u044E").addText(
+    new import_obsidian6.Setting(containerEl).setName("\u0422\u0438\u043F\u044B \u0441\u043E\u0431\u044B\u0442\u0438\u0439").setDesc("\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0438\u043F\u044B \u0441\u043E\u0431\u044B\u0442\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 \u0437\u0430\u043F\u044F\u0442\u0443\u044E").addText(
       (text) => text.setPlaceholder("\u0421\u043E\u043D, \u041C\u044B\u0441\u043B\u044C, \u0410\u043D\u0430\u043B\u0438\u0437, \u0421\u0430\u043C\u043E\u0430\u043D\u0430\u043B\u0438\u0437").setValue(this.plugin.settings.event.types.join(", ")).onChange(async (value) => {
         this.plugin.settings.event.types = value.split(",").map((s) => s.trim());
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438").setDesc("\u0412\u0435\u0440\u043D\u0443\u0442\u044C \u0432\u0441\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043A \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F\u043C \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E").addButton(
+    new import_obsidian6.Setting(containerEl).setName("\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438").setDesc("\u0412\u0435\u0440\u043D\u0443\u0442\u044C \u0432\u0441\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043A \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F\u043C \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E").addButton(
       (button) => button.setButtonText("\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C").setWarning().onClick(async () => {
         this.plugin.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
         await this.plugin.saveSettings();
@@ -933,7 +1102,7 @@ var PeriodicNotesSettingTab = class extends import_obsidian5.PluginSettingTab {
 };
 
 // src/main.ts
-var PeriodicNotesPlugin = class extends import_obsidian6.Plugin {
+var PeriodicNotesPlugin = class extends import_obsidian7.Plugin {
   async onload() {
     console.log("\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 Periodic Notes Linker");
     await this.loadSettings();
@@ -942,12 +1111,12 @@ var PeriodicNotesPlugin = class extends import_obsidian6.Plugin {
       id: "update-links-of-note",
       name: "\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u0441\u044B\u043B\u043A\u0438 \u0437\u0430\u043C\u0435\u0442\u043A\u0438",
       callback: async () => {
-        new import_obsidian6.Notice("\u041D\u0430\u0447\u0430\u0442\u043E \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0437\u0430\u043C\u0435\u0442\u043A\u0438");
+        new import_obsidian7.Notice("\u041D\u0430\u0447\u0430\u0442\u043E \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0437\u0430\u043C\u0435\u0442\u043A\u0438");
         try {
           await updateNoteLinks(this);
-          new import_obsidian6.Notice("\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
+          new import_obsidian7.Notice("\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
         } catch (error) {
-          new import_obsidian6.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0441\u0441\u044B\u043B\u043E\u043A");
+          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0441\u0441\u044B\u043B\u043E\u043A");
           console.error(error);
         }
       }
@@ -960,12 +1129,12 @@ var PeriodicNotesPlugin = class extends import_obsidian6.Plugin {
           this.app,
           "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043E\u0431\u043D\u043E\u0432\u0438\u0442 \u0441\u0441\u044B\u043B\u043A\u0438 \u0432\u043E \u0432\u0441\u0435\u0445 \u0444\u0430\u0439\u043B\u0430\u0445. \u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B?",
           async () => {
-            new import_obsidian6.Notice("\u041D\u0430\u0447\u0430\u0442\u043E \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430");
+            new import_obsidian7.Notice("\u041D\u0430\u0447\u0430\u0442\u043E \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430");
             try {
               await updateAllLinks(this);
-              new import_obsidian6.Notice("\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
+              new import_obsidian7.Notice("\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
             } catch (error) {
-              new import_obsidian6.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430");
+              new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430");
               console.error(error);
             }
           }
@@ -976,12 +1145,24 @@ var PeriodicNotesPlugin = class extends import_obsidian6.Plugin {
       id: "create-new-periodic",
       name: "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043D\u043E\u0432\u043E\u0435 \u043F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u0435",
       callback: async () => {
-        new import_obsidian6.Notice("\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043D\u0430\u0447\u0430\u0442\u043E");
+        new import_obsidian7.Notice("\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043D\u0430\u0447\u0430\u0442\u043E");
         try {
           await createNewEvent(this);
-          new import_obsidian6.Notice("\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
+          new import_obsidian7.Notice("\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
         } catch (error) {
-          new import_obsidian6.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438");
+          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438");
+          console.error(error);
+        }
+      }
+    });
+    this.addCommand({
+      id: "add-relative-note",
+      name: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u0430 \u043A \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0435",
+      callback: async () => {
+        try {
+          await addRelative(this);
+        } catch (error) {
+          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u0438 \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u0430");
           console.error(error);
         }
       }
