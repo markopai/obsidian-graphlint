@@ -20,21 +20,9 @@ export async function addRelative(plugin: ObsidianPlugin): Promise<void> {
 
   new ChoiceModal(
     plugin.app,
-    ['Создать ребёнка', 'Открыть/Создать отца', 'Создать брата'],
+    ['Открыть/Создать отца', 'Создать ребёнка', 'Создать брата'],
     async (action) => {
-      if (action === 'Создать ребёнка') {
-        new PromptModal(plugin.app, 'Введите имя ребёнка:', async (inputName) => {
-          const newName = `${file.basename}.${inputName}`;
-          const newPath = `${folderPath}${newName}.md`;
-
-          try {
-            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}\n`);
-            await updateAndOpen(plugin, newFile, newName, 'ребёнок');
-          } catch {
-            new Notice('Ошибка создания файла');
-          }
-        }).open();
-      } else if (action === 'Открыть/Создать отца') {
+      if (action === 'Открыть/Создать отца') {
         if (words.length <= 1) {
           new Notice('У этой заметки не может быть отца (она корневая)');
           return;
@@ -57,6 +45,18 @@ export async function addRelative(plugin: ObsidianPlugin): Promise<void> {
         } catch {
           new Notice('Ошибка при поиске или создании отца');
         }
+      } else if (action === 'Создать ребёнка') {
+        new PromptModal(plugin.app, 'Введите имя ребёнка:', async (inputName) => {
+          const newName = `${file.basename}.${inputName}`;
+          const newPath = `${folderPath}${newName}.md`;
+
+          try {
+            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}\n`);
+            await updateAndOpen(plugin, newFile, newName, 'ребёнок');
+          } catch {
+            new Notice('Ошибка создания файла');
+          }
+        }).open();
       } else if (action === 'Создать брата') {
         if (words.length <= 1) {
           new Notice('У корневой заметки не может быть брата таким способом');

@@ -713,10 +713,12 @@ var ConfirmationModal = class extends import_obsidian4.Modal {
   }
   onOpen() {
     const { contentEl } = this;
-    this.modalEl.addClass("confirm-modal");
+    this.modalEl.addClass("custom-unified-modal");
+    contentEl.createEl("h2", { text: "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u0435" });
     contentEl.createEl("p", { text: this.message });
     const buttonContainer = contentEl.createDiv("modal-button-container");
-    buttonContainer.createEl("button", { text: "\u041E\u0442\u043C\u0435\u043D\u0430" }).addEventListener("click", () => this.close());
+    const cancelBtn = buttonContainer.createEl("button", { text: "\u041E\u0442\u043C\u0435\u043D\u0430" });
+    cancelBtn.addEventListener("click", () => this.close());
     const confirmBtn = buttonContainer.createEl("button", {
       attr: { type: "submit" },
       cls: "mod-cta",
@@ -726,11 +728,20 @@ var ConfirmationModal = class extends import_obsidian4.Modal {
       this.close();
       await this.action();
     });
+    contentEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (document.activeElement === confirmBtn) {
+          cancelBtn.focus();
+        } else {
+          confirmBtn.focus();
+        }
+      }
+    });
     setTimeout(() => confirmBtn.focus(), 50);
   }
   onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 };
 var ChoiceModal = class extends import_obsidian4.Modal {
@@ -741,24 +752,40 @@ var ChoiceModal = class extends import_obsidian4.Modal {
   }
   onOpen() {
     const { contentEl } = this;
+    this.modalEl.addClass("custom-unified-modal");
     contentEl.createEl("h2", { text: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435" });
-    const listContainer = contentEl.createDiv("choice-list");
+    const listContainer = contentEl.createDiv("choice-list-container");
+    const buttons = [];
     this.choices.forEach((choice) => {
       const button = listContainer.createEl("button", {
         text: choice,
         cls: "mod-cta"
       });
-      button.style.margin = "5px";
-      button.style.width = "100%";
       button.addEventListener("click", () => {
         this.close();
         this.onSubmit(choice);
       });
+      buttons.push(button);
     });
+    let currentIndex = 0;
+    contentEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        currentIndex = (currentIndex + 1) % buttons.length;
+        buttons[currentIndex].focus();
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+        buttons[currentIndex].focus();
+      }
+    });
+    setTimeout(() => {
+      var _a;
+      return (_a = buttons[0]) == null ? void 0 : _a.focus();
+    }, 50);
   }
   onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 };
 var PromptModal = class extends import_obsidian4.Modal {
@@ -769,11 +796,14 @@ var PromptModal = class extends import_obsidian4.Modal {
   }
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl("h3", { text: this.promptText });
-    const input = contentEl.createEl("input", { type: "text" });
-    input.style.width = "100%";
-    input.style.marginBottom = "10px";
-    const submitBtn = contentEl.createEl("button", {
+    this.modalEl.addClass("custom-unified-modal");
+    contentEl.createEl("h2", { text: this.promptText });
+    const inputContainer = contentEl.createDiv("prompt-input-container");
+    const input = inputContainer.createEl("input", { type: "text", cls: "prompt-input" });
+    const buttonContainer = contentEl.createDiv("modal-button-container");
+    const cancelBtn = buttonContainer.createEl("button", { text: "\u041E\u0442\u043C\u0435\u043D\u0430" });
+    cancelBtn.addEventListener("click", () => this.close());
+    const submitBtn = buttonContainer.createEl("button", {
       text: "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C",
       cls: "mod-cta"
     });
@@ -785,6 +815,7 @@ var PromptModal = class extends import_obsidian4.Modal {
     });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && input.value.trim() !== "") {
+        e.preventDefault();
         this.close();
         this.onSubmit(input.value.trim());
       }
@@ -792,8 +823,7 @@ var PromptModal = class extends import_obsidian4.Modal {
     setTimeout(() => input.focus(), 50);
   }
   onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 };
 
@@ -808,22 +838,10 @@ async function addRelative(plugin) {
   const folderPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
   new ChoiceModal(
     plugin.app,
-    ["\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430", "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430", "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430"],
+    ["\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430", "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430", "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430"],
     async (action) => {
       var _a;
-      if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430") {
-        new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0440\u0435\u0431\u0451\u043D\u043A\u0430:", async (inputName) => {
-          const newName = `${file.basename}.${inputName}`;
-          const newPath = `${folderPath}${newName}.md`;
-          try {
-            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
-`);
-            await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
-          } catch (e) {
-            new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430");
-          }
-        }).open();
-      } else if (action === "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430") {
+      if (action === "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430") {
         if (words.length <= 1) {
           new import_obsidian5.Notice("\u0423 \u044D\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0446\u0430 (\u043E\u043D\u0430 \u043A\u043E\u0440\u043D\u0435\u0432\u0430\u044F)");
           return;
@@ -844,6 +862,18 @@ async function addRelative(plugin) {
         } catch (e) {
           new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0438\u043B\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u043E\u0442\u0446\u0430");
         }
+      } else if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430") {
+        new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0440\u0435\u0431\u0451\u043D\u043A\u0430:", async (inputName) => {
+          const newName = `${file.basename}.${inputName}`;
+          const newPath = `${folderPath}${newName}.md`;
+          try {
+            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
+`);
+            await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
+          } catch (e) {
+            new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430");
+          }
+        }).open();
       } else if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430") {
         if (words.length <= 1) {
           new import_obsidian5.Notice("\u0423 \u043A\u043E\u0440\u043D\u0435\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0431\u0440\u0430\u0442\u0430 \u0442\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C");

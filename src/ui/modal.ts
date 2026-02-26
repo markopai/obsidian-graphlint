@@ -12,15 +12,15 @@ export class ConfirmationModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass('custom-unified-modal');
 
-    this.modalEl.addClass('confirm-modal');
+    contentEl.createEl('h2', { text: 'Подтверждение' });
     contentEl.createEl('p', { text: this.message });
 
     const buttonContainer = contentEl.createDiv('modal-button-container');
 
-    buttonContainer
-      .createEl('button', { text: 'Отмена' })
-      .addEventListener('click', () => this.close());
+    const cancelBtn = buttonContainer.createEl('button', { text: 'Отмена' });
+    cancelBtn.addEventListener('click', () => this.close());
 
     const confirmBtn = buttonContainer.createEl('button', {
       attr: { type: 'submit' },
@@ -33,12 +33,22 @@ export class ConfirmationModal extends Modal {
       await this.action();
     });
 
+    contentEl.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (document.activeElement === confirmBtn) {
+          cancelBtn.focus();
+        } else {
+          confirmBtn.focus();
+        }
+      }
+    });
+
     setTimeout(() => confirmBtn.focus(), 50);
   }
 
   onClose(): void {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 }
 
@@ -54,28 +64,46 @@ export class ChoiceModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass('custom-unified-modal');
+
     contentEl.createEl('h2', { text: 'Выберите действие' });
 
-    const listContainer = contentEl.createDiv('choice-list');
+    const listContainer = contentEl.createDiv('choice-list-container');
+    const buttons: HTMLButtonElement[] = [];
 
     this.choices.forEach((choice) => {
       const button = listContainer.createEl('button', {
         text: choice,
         cls: 'mod-cta',
       });
-      button.style.margin = '5px';
-      button.style.width = '100%';
 
       button.addEventListener('click', () => {
         this.close();
         this.onSubmit(choice);
       });
+
+      buttons.push(button);
     });
+
+    let currentIndex = 0;
+
+    contentEl.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        currentIndex = (currentIndex + 1) % buttons.length;
+        buttons[currentIndex].focus();
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+        buttons[currentIndex].focus();
+      }
+    });
+
+    setTimeout(() => buttons[0]?.focus(), 50);
   }
 
   onClose(): void {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 }
 
@@ -91,13 +119,19 @@ export class PromptModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl('h3', { text: this.promptText });
+    this.modalEl.addClass('custom-unified-modal');
 
-    const input = contentEl.createEl('input', { type: 'text' });
-    input.style.width = '100%';
-    input.style.marginBottom = '10px';
+    contentEl.createEl('h2', { text: this.promptText });
 
-    const submitBtn = contentEl.createEl('button', {
+    const inputContainer = contentEl.createDiv('prompt-input-container');
+    const input = inputContainer.createEl('input', { type: 'text', cls: 'prompt-input' });
+
+    const buttonContainer = contentEl.createDiv('modal-button-container');
+
+    const cancelBtn = buttonContainer.createEl('button', { text: 'Отмена' });
+    cancelBtn.addEventListener('click', () => this.close());
+
+    const submitBtn = buttonContainer.createEl('button', {
       text: 'Подтвердить',
       cls: 'mod-cta',
     });
@@ -111,6 +145,7 @@ export class PromptModal extends Modal {
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && input.value.trim() !== '') {
+        e.preventDefault();
         this.close();
         this.onSubmit(input.value.trim());
       }
@@ -120,7 +155,6 @@ export class PromptModal extends Modal {
   }
 
   onClose(): void {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 }
