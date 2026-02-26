@@ -867,9 +867,15 @@ async function addRelative(plugin) {
           const newName = `${file.basename}.${inputName}`;
           const newPath = `${folderPath}${newName}.md`;
           try {
-            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
+            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+            if (existingFile instanceof import_obsidian5.TFile) {
+              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+              new import_obsidian5.Notice(`\u0420\u0435\u0431\u0451\u043D\u043E\u043A \u043E\u0442\u043A\u0440\u044B\u0442: ${newName}`);
+            } else {
+              const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
 `);
-            await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
+              await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
+            }
           } catch (e) {
             new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430");
           }
@@ -884,13 +890,19 @@ async function addRelative(plugin) {
           const newName = `${fatherName}.${inputName}`;
           const newPath = `${folderPath}${newName}.md`;
           try {
-            const currentText = await plugin.app.vault.read(file);
-            const headers = currentText.split("\n").filter((line) => line.startsWith("#")).join("\n");
-            const currentTitle = words[words.length - 1];
-            const initialContent = headers ? headers.replace(new RegExp(`# ${currentTitle}`, "g"), `# ${inputName}`) : `# ${inputName}
+            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+            if (existingFile instanceof import_obsidian5.TFile) {
+              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+              new import_obsidian5.Notice(`\u0411\u0440\u0430\u0442 \u043E\u0442\u043A\u0440\u044B\u0442: ${newName}`);
+            } else {
+              const currentText = await plugin.app.vault.read(file);
+              const headers = currentText.split("\n").filter((line) => line.startsWith("#")).join("\n");
+              const currentTitle = words[words.length - 1];
+              const initialContent = headers ? headers.replace(new RegExp(`# ${currentTitle}`, "g"), `# ${inputName}`) : `# ${inputName}
 `;
-            const newFile = await plugin.app.vault.create(newPath, initialContent);
-            await updateAndOpen(plugin, newFile, newName, "\u0431\u0440\u0430\u0442");
+              const newFile = await plugin.app.vault.create(newPath, initialContent);
+              await updateAndOpen(plugin, newFile, newName, "\u0431\u0440\u0430\u0442");
+            }
           } catch (e) {
             new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0431\u0440\u0430\u0442\u0430");
           }

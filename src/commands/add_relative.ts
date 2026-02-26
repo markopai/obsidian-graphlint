@@ -51,8 +51,14 @@ export async function addRelative(plugin: ObsidianPlugin): Promise<void> {
           const newPath = `${folderPath}${newName}.md`;
 
           try {
-            const newFile = await plugin.app.vault.create(newPath, `# ${inputName}\n`);
-            await updateAndOpen(plugin, newFile, newName, 'ребёнок');
+            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+            if (existingFile instanceof TFile) {
+              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+              new Notice(`Ребёнок открыт: ${newName}`);
+            } else {
+              const newFile = await plugin.app.vault.create(newPath, `# ${inputName}\n`);
+              await updateAndOpen(plugin, newFile, newName, 'ребёнок');
+            }
           } catch {
             new Notice('Ошибка создания файла');
           }
@@ -69,19 +75,25 @@ export async function addRelative(plugin: ObsidianPlugin): Promise<void> {
           const newPath = `${folderPath}${newName}.md`;
 
           try {
-            const currentText = await plugin.app.vault.read(file);
-            const headers = currentText
-              .split('\n')
-              .filter((line) => line.startsWith('#'))
-              .join('\n');
+            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+            if (existingFile instanceof TFile) {
+              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+              new Notice(`Брат открыт: ${newName}`);
+            } else {
+              const currentText = await plugin.app.vault.read(file);
+              const headers = currentText
+                .split('\n')
+                .filter((line) => line.startsWith('#'))
+                .join('\n');
 
-            const currentTitle = words[words.length - 1];
-            const initialContent = headers
-              ? headers.replace(new RegExp(`# ${currentTitle}`, 'g'), `# ${inputName}`)
-              : `# ${inputName}\n`;
+              const currentTitle = words[words.length - 1];
+              const initialContent = headers
+                ? headers.replace(new RegExp(`# ${currentTitle}`, 'g'), `# ${inputName}`)
+                : `# ${inputName}\n`;
 
-            const newFile = await plugin.app.vault.create(newPath, initialContent);
-            await updateAndOpen(plugin, newFile, newName, 'брат');
+              const newFile = await plugin.app.vault.create(newPath, initialContent);
+              await updateAndOpen(plugin, newFile, newName, 'брат');
+            }
           } catch {
             new Notice('Ошибка создания брата');
           }

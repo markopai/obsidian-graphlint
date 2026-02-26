@@ -1,6 +1,6 @@
 {
   "name": "obsidian-graphlint",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Obsidian плагин для ссылками между заметками",
   "main": "main.js",
   "scripts": {
