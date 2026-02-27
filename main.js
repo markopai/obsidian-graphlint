@@ -744,50 +744,6 @@ var ConfirmationModal = class extends import_obsidian4.Modal {
     this.contentEl.empty();
   }
 };
-var ChoiceModal = class extends import_obsidian4.Modal {
-  constructor(app, choices, onSubmit) {
-    super(app);
-    this.choices = choices;
-    this.onSubmit = onSubmit;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    this.modalEl.addClass("custom-unified-modal");
-    contentEl.createEl("h2", { text: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435" });
-    const listContainer = contentEl.createDiv("choice-list-container");
-    const buttons = [];
-    this.choices.forEach((choice) => {
-      const button = listContainer.createEl("button", {
-        text: choice,
-        cls: "mod-cta"
-      });
-      button.addEventListener("click", () => {
-        this.close();
-        this.onSubmit(choice);
-      });
-      buttons.push(button);
-    });
-    let currentIndex = 0;
-    contentEl.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        e.preventDefault();
-        currentIndex = (currentIndex + 1) % buttons.length;
-        buttons[currentIndex].focus();
-      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-        e.preventDefault();
-        currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-        buttons[currentIndex].focus();
-      }
-    });
-    setTimeout(() => {
-      var _a;
-      return (_a = buttons[0]) == null ? void 0 : _a.focus();
-    }, 50);
-  }
-  onClose() {
-    this.contentEl.empty();
-  }
-};
 var PromptModal = class extends import_obsidian4.Modal {
   constructor(app, promptText, onSubmit) {
     super(app);
@@ -828,88 +784,95 @@ var PromptModal = class extends import_obsidian4.Modal {
 };
 
 // src/commands/add_relative.ts
-async function addRelative(plugin) {
+async function openOrCreateFather(plugin) {
+  var _a;
   const file = plugin.app.workspace.getActiveFile();
   if (!file) {
     new import_obsidian5.Notice("\u041D\u0435\u0442 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u0444\u0430\u0439\u043B\u0430");
     return;
   }
   const words = file.basename.split(".");
+  if (words.length <= 1) {
+    new import_obsidian5.Notice("\u0423 \u044D\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0446\u0430 (\u043E\u043D\u0430 \u043A\u043E\u0440\u043D\u0435\u0432\u0430\u044F)");
+    return;
+  }
   const folderPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-  new ChoiceModal(
-    plugin.app,
-    ["\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430", "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430", "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430"],
-    async (action) => {
-      var _a;
-      if (action === "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430") {
-        if (words.length <= 1) {
-          new import_obsidian5.Notice("\u0423 \u044D\u0442\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0446\u0430 (\u043E\u043D\u0430 \u043A\u043E\u0440\u043D\u0435\u0432\u0430\u044F)");
-          return;
-        }
-        const fatherName = words.slice(0, -1).join(".");
-        const fatherPath = `${folderPath}${fatherName}.md`;
-        try {
-          let fatherFile = plugin.app.vault.getAbstractFileByPath(fatherPath);
-          if (!fatherFile) {
-            const fatherTitle = (_a = words[words.length - 2]) != null ? _a : fatherName;
-            fatherFile = await plugin.app.vault.create(fatherPath, `# ${fatherTitle}
+  const fatherName = words.slice(0, -1).join(".");
+  const fatherPath = `${folderPath}${fatherName}.md`;
+  try {
+    let fatherFile = plugin.app.vault.getAbstractFileByPath(fatherPath);
+    if (!fatherFile) {
+      const fatherTitle = (_a = words[words.length - 2]) != null ? _a : fatherName;
+      fatherFile = await plugin.app.vault.create(fatherPath, `# ${fatherTitle}
 `);
-            await updateAndOpen(plugin, fatherFile, fatherName, "\u043E\u0442\u0435\u0446");
-          } else if (fatherFile instanceof import_obsidian5.TFile) {
-            await plugin.app.workspace.getLeaf(false).openFile(fatherFile);
-            new import_obsidian5.Notice(`\u041E\u0442\u0435\u0446 \u043E\u0442\u043A\u0440\u044B\u0442: ${fatherName}`);
-          }
-        } catch (e) {
-          new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0438\u043B\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u043E\u0442\u0446\u0430");
-        }
-      } else if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430") {
-        new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0440\u0435\u0431\u0451\u043D\u043A\u0430:", async (inputName) => {
-          const newName = `${file.basename}.${inputName}`;
-          const newPath = `${folderPath}${newName}.md`;
-          try {
-            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
-            if (existingFile instanceof import_obsidian5.TFile) {
-              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
-              new import_obsidian5.Notice(`\u0420\u0435\u0431\u0451\u043D\u043E\u043A \u043E\u0442\u043A\u0440\u044B\u0442: ${newName}`);
-            } else {
-              const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
-`);
-              await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
-            }
-          } catch (e) {
-            new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430");
-          }
-        }).open();
-      } else if (action === "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430") {
-        if (words.length <= 1) {
-          new import_obsidian5.Notice("\u0423 \u043A\u043E\u0440\u043D\u0435\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0431\u0440\u0430\u0442\u0430 \u0442\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C");
-          return;
-        }
-        new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0431\u0440\u0430\u0442\u0430:", async (inputName) => {
-          const fatherName = words.slice(0, -1).join(".");
-          const newName = `${fatherName}.${inputName}`;
-          const newPath = `${folderPath}${newName}.md`;
-          try {
-            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
-            if (existingFile instanceof import_obsidian5.TFile) {
-              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
-              new import_obsidian5.Notice(`\u0411\u0440\u0430\u0442 \u043E\u0442\u043A\u0440\u044B\u0442: ${newName}`);
-            } else {
-              const currentText = await plugin.app.vault.read(file);
-              const headers = currentText.split("\n").filter((line) => line.startsWith("#")).join("\n");
-              const currentTitle = words[words.length - 1];
-              const initialContent = headers ? headers.replace(new RegExp(`# ${currentTitle}`, "g"), `# ${inputName}`) : `# ${inputName}
-`;
-              const newFile = await plugin.app.vault.create(newPath, initialContent);
-              await updateAndOpen(plugin, newFile, newName, "\u0431\u0440\u0430\u0442");
-            }
-          } catch (e) {
-            new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0431\u0440\u0430\u0442\u0430");
-          }
-        }).open();
-      }
+      await updateAndOpen(plugin, fatherFile, fatherName, "\u043E\u0442\u0435\u0446");
+    } else if (fatherFile instanceof import_obsidian5.TFile) {
+      await plugin.app.workspace.getLeaf(false).openFile(fatherFile);
+      new import_obsidian5.Notice(`\u041E\u0442\u0435\u0446 \u043E\u0442\u043A\u0440\u044B\u0442: ${fatherName}`);
     }
-  ).open();
+  } catch (e) {
+    new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u0438\u0441\u043A\u0435 \u0438\u043B\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u043E\u0442\u0446\u0430");
+  }
+}
+async function createChild(plugin) {
+  const file = plugin.app.workspace.getActiveFile();
+  if (!file) {
+    new import_obsidian5.Notice("\u041D\u0435\u0442 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u0444\u0430\u0439\u043B\u0430");
+    return;
+  }
+  const folderPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
+  new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0440\u0435\u0431\u0451\u043D\u043A\u0430:", async (inputName) => {
+    const newName = `${file.basename}.${inputName}`;
+    const newPath = `${folderPath}${newName}.md`;
+    try {
+      const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+      if (existingFile instanceof import_obsidian5.TFile) {
+        await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+        new import_obsidian5.Notice(`\u0420\u0435\u0431\u0451\u043D\u043E\u043A \u043E\u0442\u043A\u0440\u044B\u0442: ${newName}`);
+      } else {
+        const newFile = await plugin.app.vault.create(newPath, `# ${inputName}
+`);
+        await updateAndOpen(plugin, newFile, newName, "\u0440\u0435\u0431\u0451\u043D\u043E\u043A");
+      }
+    } catch (e) {
+      new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430");
+    }
+  }).open();
+}
+async function createBrother(plugin) {
+  const file = plugin.app.workspace.getActiveFile();
+  if (!file) {
+    new import_obsidian5.Notice("\u041D\u0435\u0442 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u0444\u0430\u0439\u043B\u0430");
+    return;
+  }
+  const words = file.basename.split(".");
+  if (words.length <= 1) {
+    new import_obsidian5.Notice("\u0423 \u043A\u043E\u0440\u043D\u0435\u0432\u043E\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0431\u0440\u0430\u0442\u0430 \u0442\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C");
+    return;
+  }
+  const folderPath = file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
+  new PromptModal(plugin.app, "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F \u0431\u0440\u0430\u0442\u0430:", async (inputName) => {
+    const fatherName = words.slice(0, -1).join(".");
+    const newName = `${fatherName}.${inputName}`;
+    const newPath = `${folderPath}${newName}.md`;
+    try {
+      const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+      if (existingFile instanceof import_obsidian5.TFile) {
+        await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+        new import_obsidian5.Notice(`\u0411\u0440\u0430\u0442 \u043E\u0442\u043A\u0440\u044B\u0442: ${newName}`);
+      } else {
+        const currentText = await plugin.app.vault.read(file);
+        const headers = currentText.split("\n").filter((line) => line.startsWith("#")).join("\n");
+        const currentTitle = words[words.length - 1];
+        const initialContent = headers ? headers.replace(new RegExp(`# ${currentTitle}`, "g"), `# ${inputName}`) : `# ${inputName}
+`;
+        const newFile = await plugin.app.vault.create(newPath, initialContent);
+        await updateAndOpen(plugin, newFile, newName, "\u0431\u0440\u0430\u0442");
+      }
+    } catch (e) {
+      new import_obsidian5.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0431\u0440\u0430\u0442\u0430");
+    }
+  }).open();
 }
 async function updateAndOpen(plugin, file, name, type) {
   const allFiles = plugin.app.vault.getMarkdownFiles();
@@ -1157,9 +1120,8 @@ var PeriodicNotesPlugin = class extends import_obsidian7.Plugin {
         try {
           await updateNoteLinks(this);
           new import_obsidian7.Notice("\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
-        } catch (error) {
+        } catch (e) {
           new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0441\u0441\u044B\u043B\u043E\u043A");
-          console.error(error);
         }
       }
     });
@@ -1175,9 +1137,8 @@ var PeriodicNotesPlugin = class extends import_obsidian7.Plugin {
             try {
               await updateAllLinks(this);
               new import_obsidian7.Notice("\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0441\u044B\u043B\u043E\u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
-            } catch (error) {
+            } catch (e) {
               new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430");
-              console.error(error);
             }
           }
         ).open();
@@ -1191,21 +1152,41 @@ var PeriodicNotesPlugin = class extends import_obsidian7.Plugin {
         try {
           await createNewEvent(this);
           new import_obsidian7.Notice("\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0435\u043D\u043E");
-        } catch (error) {
+        } catch (e) {
           new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438");
-          console.error(error);
         }
       }
     });
     this.addCommand({
-      id: "add-relative-note",
-      name: "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u0430 \u043A \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0435",
+      id: "open-create-father-note",
+      name: "\u041E\u0442\u043A\u0440\u044B\u0442\u044C/\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0446\u0430 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438",
       callback: async () => {
         try {
-          await addRelative(this);
-        } catch (error) {
-          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u0438 \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u0430");
-          console.error(error);
+          await openOrCreateFather(this);
+        } catch (e) {
+          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0435 \u043E\u0442\u0446\u0430");
+        }
+      }
+    });
+    this.addCommand({
+      id: "create-child-note",
+      name: "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0440\u0435\u0431\u0451\u043D\u043A\u0430 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438",
+      callback: async () => {
+        try {
+          await createChild(this);
+        } catch (e) {
+          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0440\u0435\u0431\u0451\u043D\u043A\u0430");
+        }
+      }
+    });
+    this.addCommand({
+      id: "create-brother-note",
+      name: "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0431\u0440\u0430\u0442\u0430 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0437\u0430\u043C\u0435\u0442\u043A\u0438",
+      callback: async () => {
+        try {
+          await createBrother(this);
+        } catch (e) {
+          new import_obsidian7.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0431\u0440\u0430\u0442\u0430");
         }
       }
     });

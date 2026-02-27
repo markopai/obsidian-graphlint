@@ -2,7 +2,7 @@ import { Plugin, Notice } from 'obsidian';
 import { updateNoteLinks } from './commands/note_update';
 import { updateAllLinks } from './commands/all_note_update';
 import { createNewEvent } from './commands/new_event';
-import { addRelative } from './commands/add_relative';
+import { openOrCreateFather, createChild, createBrother } from './commands/add_relative';
 import { ConfirmationModal } from './ui/modal';
 import { PeriodicNotesSettingTab, DEFAULT_SETTINGS, PluginSettings } from './settings/settings';
 
@@ -23,9 +23,8 @@ export default class PeriodicNotesPlugin extends Plugin {
         try {
           await updateNoteLinks(this);
           new Notice('Обновление ссылок заметки закончено');
-        } catch (error) {
+        } catch {
           new Notice('Ошибка при обновлении ссылок');
-          console.error(error);
         }
       },
     });
@@ -42,9 +41,8 @@ export default class PeriodicNotesPlugin extends Plugin {
             try {
               await updateAllLinks(this);
               new Notice('Обновление ссылок хранилища закончено');
-            } catch (error) {
+            } catch {
               new Notice('Ошибка при обновлении хранилища');
-              console.error(error);
             }
           }
         ).open();
@@ -59,22 +57,44 @@ export default class PeriodicNotesPlugin extends Plugin {
         try {
           await createNewEvent(this);
           new Notice('Создание закончено');
-        } catch (error) {
+        } catch {
           new Notice('Ошибка при создании');
-          console.error(error);
         }
       },
     });
 
     this.addCommand({
-      id: 'add-relative-note',
-      name: 'Добавить родственника к текущей заметке',
+      id: 'open-create-father-note',
+      name: 'Открыть/Создать отца для текущей заметки',
       callback: async () => {
         try {
-          await addRelative(this);
-        } catch (error) {
-          new Notice('Ошибка при добавлении родственника');
-          console.error(error);
+          await openOrCreateFather(this);
+        } catch {
+          new Notice('Ошибка при обработке отца');
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'create-child-note',
+      name: 'Создать ребёнка для текущей заметки',
+      callback: async () => {
+        try {
+          await createChild(this);
+        } catch {
+          new Notice('Ошибка при создании ребёнка');
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'create-brother-note',
+      name: 'Создать брата для текущей заметки',
+      callback: async () => {
+        try {
+          await createBrother(this);
+        } catch {
+          new Notice('Ошибка при создании брата');
         }
       },
     });

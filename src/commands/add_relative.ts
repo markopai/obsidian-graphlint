@@ -2,13 +2,13 @@ import { Notice, Plugin, TFile } from 'obsidian';
 import { PluginSettings } from '../settings/settings';
 import { Updater } from '../utils/services/updater';
 import { Repo, IGraph } from '../repository/repo';
-import { ChoiceModal, PromptModal } from '../ui/modal';
+import { PromptModal } from '../ui/modal';
 
 interface ObsidianPlugin extends Plugin {
   settings: PluginSettings;
 }
 
-export async function addRelative(plugin: ObsidianPlugin): Promise<void> {
+export async function openOrCreateFather(plugin: ObsidianPlugin): Promise<void> {
   const file = plugin.app.workspace.getActiveFile();
   if (!file) {
     new Notice('Нет активного файла');
@@ -16,91 +16,103 @@ export async function addRelative(plugin: ObsidianPlugin): Promise<void> {
   }
 
   const words = file.basename.split('.');
+  if (words.length <= 1) {
+    new Notice('У этой заметки не может быть отца (она корневая)');
+    return;
+  }
+
+  const folderPath = file.parent && file.parent.path !== '/' ? `${file.parent.path}/` : '';
+  const fatherName = words.slice(0, -1).join('.');
+  const fatherPath = `${folderPath}${fatherName}.md`;
+
+  try {
+    let fatherFile = plugin.app.vault.getAbstractFileByPath(fatherPath);
+
+    if (!fatherFile) {
+      const fatherTitle = words[words.length - 2] ?? fatherName;
+      fatherFile = await plugin.app.vault.create(fatherPath, `# ${fatherTitle}\n`);
+      await updateAndOpen(plugin, fatherFile as TFile, fatherName, 'отец');
+    } else if (fatherFile instanceof TFile) {
+      await plugin.app.workspace.getLeaf(false).openFile(fatherFile);
+      new Notice(`Отец открыт: ${fatherName}`);
+    }
+  } catch {
+    new Notice('Ошибка при поиске или создании отца');
+  }
+}
+
+export async function createChild(plugin: ObsidianPlugin): Promise<void> {
+  const file = plugin.app.workspace.getActiveFile();
+  if (!file) {
+    new Notice('Нет активного файла');
+    return;
+  }
+
   const folderPath = file.parent && file.parent.path !== '/' ? `${file.parent.path}/` : '';
 
-  new ChoiceModal(
-    plugin.app,
-    ['Открыть/Создать отца', 'Создать ребёнка', 'Создать брата'],
-    async (action) => {
-      if (action === 'Открыть/Создать отца') {
-        if (words.length <= 1) {
-          new Notice('У этой заметки не может быть отца (она корневая)');
-          return;
-        }
+  new PromptModal(plugin.app, 'Введите имя ребёнка:', async (inputName) => {
+    const newName = `${file.basename}.${inputName}`;
+    const newPath = `${folderPath}${newName}.md`;
 
-        const fatherName = words.slice(0, -1).join('.');
-        const fatherPath = `${folderPath}${fatherName}.md`;
-
-        try {
-          let fatherFile = plugin.app.vault.getAbstractFileByPath(fatherPath);
-
-          if (!fatherFile) {
-            const fatherTitle = words[words.length - 2] ?? fatherName;
-            fatherFile = await plugin.app.vault.create(fatherPath, `# ${fatherTitle}\n`);
-            await updateAndOpen(plugin, fatherFile as TFile, fatherName, 'отец');
-          } else if (fatherFile instanceof TFile) {
-            await plugin.app.workspace.getLeaf(false).openFile(fatherFile);
-            new Notice(`Отец открыт: ${fatherName}`);
-          }
-        } catch {
-          new Notice('Ошибка при поиске или создании отца');
-        }
-      } else if (action === 'Создать ребёнка') {
-        new PromptModal(plugin.app, 'Введите имя ребёнка:', async (inputName) => {
-          const newName = `${file.basename}.${inputName}`;
-          const newPath = `${folderPath}${newName}.md`;
-
-          try {
-            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
-            if (existingFile instanceof TFile) {
-              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
-              new Notice(`Ребёнок открыт: ${newName}`);
-            } else {
-              const newFile = await plugin.app.vault.create(newPath, `# ${inputName}\n`);
-              await updateAndOpen(plugin, newFile, newName, 'ребёнок');
-            }
-          } catch {
-            new Notice('Ошибка создания файла');
-          }
-        }).open();
-      } else if (action === 'Создать брата') {
-        if (words.length <= 1) {
-          new Notice('У корневой заметки не может быть брата таким способом');
-          return;
-        }
-
-        new PromptModal(plugin.app, 'Введите имя брата:', async (inputName) => {
-          const fatherName = words.slice(0, -1).join('.');
-          const newName = `${fatherName}.${inputName}`;
-          const newPath = `${folderPath}${newName}.md`;
-
-          try {
-            const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
-            if (existingFile instanceof TFile) {
-              await plugin.app.workspace.getLeaf(false).openFile(existingFile);
-              new Notice(`Брат открыт: ${newName}`);
-            } else {
-              const currentText = await plugin.app.vault.read(file);
-              const headers = currentText
-                .split('\n')
-                .filter((line) => line.startsWith('#'))
-                .join('\n');
-
-              const currentTitle = words[words.length - 1];
-              const initialContent = headers
-                ? headers.replace(new RegExp(`# ${currentTitle}`, 'g'), `# ${inputName}`)
-                : `# ${inputName}\n`;
-
-              const newFile = await plugin.app.vault.create(newPath, initialContent);
-              await updateAndOpen(plugin, newFile, newName, 'брат');
-            }
-          } catch {
-            new Notice('Ошибка создания брата');
-          }
-        }).open();
+    try {
+      const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+      if (existingFile instanceof TFile) {
+        await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+        new Notice(`Ребёнок открыт: ${newName}`);
+      } else {
+        const newFile = await plugin.app.vault.create(newPath, `# ${inputName}\n`);
+        await updateAndOpen(plugin, newFile, newName, 'ребёнок');
       }
+    } catch {
+      new Notice('Ошибка создания файла');
     }
-  ).open();
+  }).open();
+}
+
+export async function createBrother(plugin: ObsidianPlugin): Promise<void> {
+  const file = plugin.app.workspace.getActiveFile();
+  if (!file) {
+    new Notice('Нет активного файла');
+    return;
+  }
+
+  const words = file.basename.split('.');
+  if (words.length <= 1) {
+    new Notice('У корневой заметки не может быть брата таким способом');
+    return;
+  }
+
+  const folderPath = file.parent && file.parent.path !== '/' ? `${file.parent.path}/` : '';
+
+  new PromptModal(plugin.app, 'Введите имя брата:', async (inputName) => {
+    const fatherName = words.slice(0, -1).join('.');
+    const newName = `${fatherName}.${inputName}`;
+    const newPath = `${folderPath}${newName}.md`;
+
+    try {
+      const existingFile = plugin.app.vault.getAbstractFileByPath(newPath);
+      if (existingFile instanceof TFile) {
+        await plugin.app.workspace.getLeaf(false).openFile(existingFile);
+        new Notice(`Брат открыт: ${newName}`);
+      } else {
+        const currentText = await plugin.app.vault.read(file);
+        const headers = currentText
+          .split('\n')
+          .filter((line) => line.startsWith('#'))
+          .join('\n');
+
+        const currentTitle = words[words.length - 1];
+        const initialContent = headers
+          ? headers.replace(new RegExp(`# ${currentTitle}`, 'g'), `# ${inputName}`)
+          : `# ${inputName}\n`;
+
+        const newFile = await plugin.app.vault.create(newPath, initialContent);
+        await updateAndOpen(plugin, newFile, newName, 'брат');
+      }
+    } catch {
+      new Notice('Ошибка создания брата');
+    }
+  }).open();
 }
 
 async function updateAndOpen(plugin: ObsidianPlugin, file: TFile, name: string, type: string) {

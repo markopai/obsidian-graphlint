@@ -1,7 +1,7 @@
 {
   "id": "obsidian-graphlint",
   "name": "Graph Lint",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "minAppVersion": "0.15.0",
   "description": "Управление ссылками между заметками",
   "author": "markopai",
