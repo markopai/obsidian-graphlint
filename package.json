@@ -16,7 +16,7 @@
     "obsidian",
     "plugin"
   ],
-  "author": "everpeznul",
+  "author": "markopai",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^16.18.126",
