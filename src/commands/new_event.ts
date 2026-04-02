@@ -33,11 +33,9 @@ class EventTypeModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-
     contentEl.createEl('h2', { text: 'Выберите тип события' });
 
     const listContainer = contentEl.createDiv('event-type-list');
-
     this.eventTypes.forEach((type) => {
       const button = listContainer.createEl('button', {
         text: type,
@@ -59,14 +57,12 @@ class EventTypeModal extends Modal {
 
 export async function createNewEvent(plugin: ObsidianPlugin): Promise<void> {
   const file = plugin.app.workspace.getActiveFile();
-
   if (!file) {
     new Notice('Нет активного файла');
     return;
   }
 
   const title = file.basename;
-
   if (!/^\d{4}-\d{2}-\d{2}$/.test(title)) {
     new Notice('Заметка не является ежедневной');
     return;
@@ -83,7 +79,6 @@ export async function createNewEvent(plugin: ObsidianPlugin): Promise<void> {
   // Выбор типа события
   let eventType: string | undefined;
   const pluginManager = (plugin.app as any).plugins as PluginManager;
-
   if (pluginManager.plugins.templater) {
     // Используем Templater suggester если доступен
     eventType =
@@ -103,25 +98,31 @@ export async function createNewEvent(plugin: ObsidianPlugin): Promise<void> {
   if (!eventType) return;
 
   const eventPrefix = eventType.charAt(0).toLowerCase() + eventType.slice(1);
+
+  // Строго фильтруем файлы, чтобы они оканчивались на <N...
   const eventFiles = voidFiles.filter((file: TFile) =>
-    file.basename.startsWith(`${eventPrefix}.${title}.<`)
+    file.basename.startsWith(`${eventPrefix}.${title}.<N`)
   );
 
   let maxNumber = 0;
   eventFiles.forEach((file: TFile) => {
-    const match = file.basename.match(/<(\d+)>/);
+    // Извлекаем цифры после <N (сработает и для 1, и для 01)
+    const match = file.basename.match(/<N(\d+)>/);
     if (match) {
-      const number = parseInt(match[1]);
+      const number = parseInt(match[1], 10);
       if (number > maxNumber) maxNumber = number;
     }
   });
 
-  const newFileName = `${plugin.settings.paths.void}${eventPrefix}.${title}.<${maxNumber + 1}>.md`;
+  // Добавляем ведущий ноль, чтобы всегда было минимум 2 цифры
+  const nextNumberStr = String(maxNumber + 1).padStart(2, '0');
+
+  const newFileName = `${plugin.settings.paths.void}${eventPrefix}.${title}.<N${nextNumberStr}>.md`;
 
   try {
     // Создаем файл
     const createdFile = await plugin.app.vault.create(newFileName, '');
-    new Notice(`Создан: ${eventPrefix}.<${maxNumber + 1}>`);
+    new Notice(`Создан: ${eventPrefix}.<N${nextNumberStr}>`);
 
     // Обновляем графы
     const repository = new Repo(plugin);
@@ -144,7 +145,7 @@ export async function createNewEvent(plugin: ObsidianPlugin): Promise<void> {
     const updater = new Updater(plugin);
     await updater.update(createdFile, VOID, CELESTIA);
 
-    new Notice(`Обновлено: ${eventPrefix}.<${maxNumber + 1}>`);
+    new Notice(`Обновлено: ${eventPrefix}.<N${nextNumberStr}>`);
   } catch (error) {
     console.error(`Ошибка создания: ${error}`);
     new Notice('Ошибка при создании файла');

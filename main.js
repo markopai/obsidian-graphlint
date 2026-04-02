@@ -664,20 +664,21 @@ async function createNewEvent(plugin) {
   if (!eventType) return;
   const eventPrefix = eventType.charAt(0).toLowerCase() + eventType.slice(1);
   const eventFiles = voidFiles.filter(
-    (file2) => file2.basename.startsWith(`${eventPrefix}.${title}.<`)
+    (file2) => file2.basename.startsWith(`${eventPrefix}.${title}.<N`)
   );
   let maxNumber = 0;
   eventFiles.forEach((file2) => {
-    const match = file2.basename.match(/<(\d+)>/);
+    const match = file2.basename.match(/<N(\d+)>/);
     if (match) {
-      const number = parseInt(match[1]);
+      const number = parseInt(match[1], 10);
       if (number > maxNumber) maxNumber = number;
     }
   });
-  const newFileName = `${plugin.settings.paths.void}${eventPrefix}.${title}.<${maxNumber + 1}>.md`;
+  const nextNumberStr = String(maxNumber + 1).padStart(2, "0");
+  const newFileName = `${plugin.settings.paths.void}${eventPrefix}.${title}.<N${nextNumberStr}>.md`;
   try {
     const createdFile = await plugin.app.vault.create(newFileName, "");
-    new import_obsidian3.Notice(`\u0421\u043E\u0437\u0434\u0430\u043D: ${eventPrefix}.<${maxNumber + 1}>`);
+    new import_obsidian3.Notice(`\u0421\u043E\u0437\u0434\u0430\u043D: ${eventPrefix}.<N${nextNumberStr}>`);
     const repository = new Repo(plugin);
     const VOID = repository.createGraph(
       voidFiles,
@@ -693,7 +694,7 @@ async function createNewEvent(plugin) {
     VOID.files.sort((a, b) => a.basename.localeCompare(b.basename));
     const updater = new Updater(plugin);
     await updater.update(createdFile, VOID, CELESTIA);
-    new import_obsidian3.Notice(`\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${eventPrefix}.<${maxNumber + 1}>`);
+    new import_obsidian3.Notice(`\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${eventPrefix}.<N${nextNumberStr}>`);
   } catch (error) {
     console.error(`\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F: ${error}`);
     new import_obsidian3.Notice("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0444\u0430\u0439\u043B\u0430");
