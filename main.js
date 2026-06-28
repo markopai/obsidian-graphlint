@@ -106,8 +106,15 @@ var Note = class {
     return (_a = this.words[this.words.length - 1]) != null ? _a : this.name;
   }
   parseBody(text) {
-    var _a;
-    return (_a = text.split(/^# .*$/gm).pop()) != null ? _a : text;
+    const firstHeaderMatch = text.match(/^# .*/m);
+    if (!firstHeaderMatch || firstHeaderMatch.index === void 0) {
+      return text;
+    }
+    const firstHeader = firstHeaderMatch[0].slice(2).trim();
+    if (firstHeader !== this.title) {
+      return text;
+    }
+    return text.slice(firstHeaderMatch.index + firstHeaderMatch[0].length);
   }
   async findFounder(repo, graph, _celestia) {
     const founderName = this.words[0];
@@ -505,9 +512,10 @@ var Updater = class {
     await this.plugin.app.vault.modify(file, newText);
   }
   formatNoteText(note, links, tags) {
+    const separator = note.body.length === 0 || note.body.startsWith("\n") || note.body.startsWith("\r") ? "" : "\n";
     return [links, `
 ${tags}
-`, `# ${note.title}${note.body}`].join("\n");
+`, `# ${note.title}${separator}${note.body}`].join("\n");
   }
 };
 

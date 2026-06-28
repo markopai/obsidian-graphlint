@@ -22,7 +22,18 @@ class Note {
   }
 
   private parseBody(text: string): string {
-    return text.split(/^# .*$/gm).pop() ?? text;
+    const firstHeaderMatch = text.match(/^# .*/m);
+
+    if (!firstHeaderMatch || firstHeaderMatch.index === undefined) {
+      return text;
+    }
+
+    const firstHeader = firstHeaderMatch[0].slice(2).trim();
+    if (firstHeader !== this.title) {
+      return text;
+    }
+
+    return text.slice(firstHeaderMatch.index + firstHeaderMatch[0].length);
   }
 
   async findFounder(

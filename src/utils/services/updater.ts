@@ -39,6 +39,11 @@ export class Updater {
   }
 
   private formatNoteText(note: Note, links: string, tags: string): string {
-    return [links, `\n${tags}\n`, `# ${note.title}${note.body}`].join('\n');
+    const separator =
+      note.body.length === 0 || note.body.startsWith('\n') || note.body.startsWith('\r')
+        ? ''
+        : '\n';
+
+    return [links, `\n${tags}\n`, `# ${note.title}${separator}${note.body}`].join('\n');
   }
 }
